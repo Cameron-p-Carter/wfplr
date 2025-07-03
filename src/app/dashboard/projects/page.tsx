@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Search, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -142,7 +143,15 @@ export default function ProjectsPage() {
                     const status = getProjectStatus(project);
                     return (
                       <TableRow key={project.id}>
-                        <TableCell className="font-medium">{project.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <Link 
+                            href={`/dashboard/projects/${project.id}`}
+                            className="flex items-center space-x-2 hover:text-primary transition-colors"
+                          >
+                            <span>{project.name}</span>
+                            <ExternalLink className="h-3 w-3" />
+                          </Link>
+                        </TableCell>
                         <TableCell>{formatDate(project.start_date)}</TableCell>
                         <TableCell>{formatDate(project.end_date)}</TableCell>
                         <TableCell>

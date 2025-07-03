@@ -72,6 +72,163 @@ export async function deleteRoleType(id: string) {
   if (error) throw error;
 }
 
+// Project Resource Requirements
+export async function getProjectRequirements(projectId: string) {
+  const { data, error } = await supabase
+    .from("project_requirements_detailed")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("start_date");
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function getProjectRequirementById(id: string) {
+  const { data, error } = await supabase
+    .from("project_resource_requirements")
+    .select("*")
+    .eq("id", id)
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function createProjectRequirement(requirement: TablesInsert<"project_resource_requirements">) {
+  const { data, error } = await supabase
+    .from("project_resource_requirements")
+    .insert(requirement)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProjectRequirement(id: string, requirement: TablesUpdate<"project_resource_requirements">) {
+  const { data, error } = await supabase
+    .from("project_resource_requirements")
+    .update(requirement)
+    .eq("id", id)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteProjectRequirement(id: string) {
+  const { error } = await supabase
+    .from("project_resource_requirements")
+    .delete()
+    .eq("id", id);
+  
+  if (error) throw error;
+}
+
+// Leave Periods
+export async function getPersonLeave(personId: string) {
+  const { data, error } = await supabase
+    .from("leave_periods")
+    .select("*")
+    .eq("person_id", personId)
+    .order("start_date");
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function getAllLeave() {
+  const { data, error } = await supabase
+    .from("leave_periods")
+    .select(`
+      *,
+      people!inner(
+        id,
+        name,
+        role_types(name)
+      )
+    `)
+    .order("start_date");
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function getLeavePeriodById(id: string) {
+  const { data, error } = await supabase
+    .from("leave_periods")
+    .select("*")
+    .eq("id", id)
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function createLeavePeriod(leave: TablesInsert<"leave_periods">) {
+  const { data, error } = await supabase
+    .from("leave_periods")
+    .insert(leave)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function updateLeavePeriod(id: string, leave: TablesUpdate<"leave_periods">) {
+  const { data, error } = await supabase
+    .from("leave_periods")
+    .update(leave)
+    .eq("id", id)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function updateLeaveStatus(id: string, status: "pending" | "approved" | "unapproved") {
+  const { data, error } = await supabase
+    .from("leave_periods")
+    .update({ status })
+    .eq("id", id)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteLeavePeriod(id: string) {
+  const { error } = await supabase
+    .from("leave_periods")
+    .delete()
+    .eq("id", id);
+  
+  if (error) throw error;
+}
+
+export async function getPendingLeave() {
+  const { data, error } = await supabase
+    .from("leave_periods")
+    .select(`
+      *,
+      people!inner(
+        id,
+        name,
+        role_types(name)
+      )
+    `)
+    .eq("status", "pending")
+    .order("start_date");
+  
+  if (error) throw error;
+  return data;
+}
+
 // People
 export async function getPeople() {
   const { data, error } = await supabase

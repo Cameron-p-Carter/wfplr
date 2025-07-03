@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Computer, LayoutDashboard, Users, Briefcase, UserCheck } from "lucide-react";
+import { Computer, LayoutDashboard, Users, Briefcase, UserCheck, Calendar } from "lucide-react";
 
 import {
   Sidebar,
@@ -31,6 +31,11 @@ const items = [
     title: "People",
     url: "/dashboard/people",
     icon: Users,
+  },
+  {
+    title: "Leave",
+    url: "/dashboard/leave",
+    icon: Calendar,
   },
   {
     title: "Role Types",
