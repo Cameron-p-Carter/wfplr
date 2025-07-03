@@ -831,13 +831,17 @@ export default function ProjectDetailPage() {
             <RequirementForm
               initialData={{
                 role_type_id: editingPositionRequirement.role_type_id!,
-                required_count: 1, // Individual position
+                required_count: editingPositionRequirement.required_count!,
                 start_date: editingPositionRequirement.start_date!,
                 end_date: editingPositionRequirement.end_date!,
               }}
               onSubmit={async (data) => {
-                await handleUpdateRequirement(data);
-                setEditingPositionRequirement(null);
+                try {
+                  await update(editingPositionRequirement.id!, { ...data, project_id: projectId });
+                  setEditingPositionRequirement(null);
+                } catch (error) {
+                  // Error is handled in the hook
+                }
               }}
               onCancel={() => setEditingPositionRequirement(null)}
             />
