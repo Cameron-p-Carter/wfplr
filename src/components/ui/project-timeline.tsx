@@ -284,11 +284,41 @@ export function ProjectTimeline({
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          <div className="whitespace-pre-line">
-            {isAllocated && position.allocatedPerson
-              ? `${position.allocatedPerson.name}\n${position.roleTypeName}\n${position.allocatedPerson.allocationStartDate.toLocaleDateString()} - ${position.allocatedPerson.allocationEndDate.toLocaleDateString()}\n${position.allocatedPerson.allocationPercentage}% allocation`
-              : `${position.roleTypeName} (Position ${position.positionIndex + 1})\n${position.startDate.toLocaleDateString()} - ${position.endDate.toLocaleDateString()}\nClick + to allocate someone`
-            }
+          <div className="space-y-2">
+            <div className="whitespace-pre-line">
+              {isAllocated && position.allocatedPerson
+                ? `${position.allocatedPerson.name}\n${position.roleTypeName}\n${position.allocatedPerson.allocationStartDate.toLocaleDateString()} - ${position.allocatedPerson.allocationEndDate.toLocaleDateString()}\n${position.allocatedPerson.allocationPercentage}% allocation`
+                : `${position.roleTypeName} (Position ${position.positionIndex + 1})\n${position.startDate.toLocaleDateString()} - ${position.endDate.toLocaleDateString()}`
+              }
+            </div>
+            <div className="flex items-center space-x-2 pt-1 border-t border-gray-600">
+              {onAllocatePosition && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 hover:bg-gray-700 text-white hover:text-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAllocatePosition(position);
+                  }}
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              )}
+              {onEditPosition && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 hover:bg-gray-700 text-white hover:text-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditPosition(position);
+                  }}
+                >
+                  <Edit className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
           </div>
         </TooltipContent>
       </Tooltip>
