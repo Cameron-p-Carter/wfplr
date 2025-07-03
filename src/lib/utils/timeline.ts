@@ -47,13 +47,24 @@ export function calculateItemPosition(
   timelineEnd: Date,
   totalWidth: number
 ): { left: number; width: number } {
-  const totalDays = differenceInDays(timelineEnd, timelineStart);
-  const itemStartDays = Math.max(0, differenceInDays(item.startDate, timelineStart));
-  const itemEndDays = Math.min(totalDays, differenceInDays(item.endDate, timelineStart));
-  const itemDuration = Math.max(1, itemEndDays - itemStartDays);
+  // Use milliseconds for more accurate calculations
+  const timelineStartMs = timelineStart.getTime();
+  const timelineEndMs = timelineEnd.getTime();
+  const itemStartMs = item.startDate.getTime();
+  const itemEndMs = item.endDate.getTime();
   
-  const left = (itemStartDays / totalDays) * totalWidth;
-  const width = (itemDuration / totalDays) * totalWidth;
+  const totalDuration = timelineEndMs - timelineStartMs;
+  
+  // Clamp item dates to timeline bounds
+  const clampedStartMs = Math.max(timelineStartMs, itemStartMs);
+  const clampedEndMs = Math.min(timelineEndMs, itemEndMs);
+  
+  // Calculate positions as percentages of total timeline
+  const startOffset = clampedStartMs - timelineStartMs;
+  const itemDuration = Math.max(0, clampedEndMs - clampedStartMs);
+  
+  const left = (startOffset / totalDuration) * totalWidth;
+  const width = Math.max(1, (itemDuration / totalDuration) * totalWidth); // Minimum 1px width
   
   return { left, width };
 }
@@ -114,6 +125,46 @@ export function getDefaultTimelineRange(): { startDate: Date; endDate: Date } {
   const now = new Date();
   const startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1); // 2 months ago
   const endDate = new Date(now.getFullYear(), now.getMonth() + 4, 0); // 4 months from now
+  
+  return { startDate, endDate };
+}
+
+export function getDataBasedTimelineRange(
+  requirements: Array<{ start_date?: string | null; end_date?: string | null }>,
+  allocations: Array<{ start_date?: string | null; end_date?: string | null }>,
+  projectStartDate?: Date,
+  projectEndDate?: Date
+): { startDate: Date; endDate: Date } {
+  const dates: Date[] = [];
+  
+  // Add project dates if available
+  if (projectStartDate) dates.push(projectStartDate);
+  if (projectEndDate) dates.push(projectEndDate);
+  
+  // Add requirement dates
+  requirements.forEach(req => {
+    if (req.start_date) dates.push(new Date(req.start_date));
+    if (req.end_date) dates.push(new Date(req.end_date));
+  });
+  
+  // Add allocation dates
+  allocations.forEach(alloc => {
+    if (alloc.start_date) dates.push(new Date(alloc.start_date));
+    if (alloc.end_date) dates.push(new Date(alloc.end_date));
+  });
+  
+  if (dates.length === 0) {
+    // Fallback to default range if no data
+    return getDefaultTimelineRange();
+  }
+  
+  // Find min and max dates
+  const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+  const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+  
+  // Add some padding (1 month before and after)
+  const startDate = new Date(minDate.getFullYear(), minDate.getMonth() - 1, 1);
+  const endDate = new Date(maxDate.getFullYear(), maxDate.getMonth() + 2, 0); // End of month + 1
   
   return { startDate, endDate };
 }

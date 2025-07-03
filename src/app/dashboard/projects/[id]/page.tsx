@@ -18,8 +18,10 @@ import { RequirementForm } from "./components/requirement-form";
 import { AllocationForm } from "./components/allocation-form";
 import { Timeline } from "@/components/ui/timeline";
 import { InteractiveTimeline } from "@/components/ui/interactive-timeline";
+import { ProjectTimeline } from "@/components/ui/project-timeline";
+import { SmartAllocationForm } from "./components/smart-allocation-form";
 import { formatDate } from "@/lib/utils/date";
-import { getDefaultTimelineRange, TimelineItem, TimelineConfig } from "@/lib/utils/timeline";
+import { getDefaultTimelineRange, getDataBasedTimelineRange, TimelineItem, TimelineConfig } from "@/lib/utils/timeline";
 import type { Tables } from "@/types/supabase";
 
 export default function ProjectDetailPage() {
@@ -46,6 +48,28 @@ export default function ProjectDetailPage() {
     ...getDefaultTimelineRange(),
     granularity: 'month' as const,
   }));
+
+  // Update timeline range when data changes
+  useEffect(() => {
+    if (!requirementsLoading && !allocationsLoading && (requirements.length > 0 || allocations.length > 0)) {
+      const dataBasedRange = getDataBasedTimelineRange(
+        requirements,
+        allocations,
+        project ? new Date(project.start_date) : undefined,
+        project ? new Date(project.end_date) : undefined
+      );
+      
+      setTimelineConfig(prev => ({
+        ...prev,
+        startDate: dataBasedRange.startDate,
+        endDate: dataBasedRange.endDate,
+      }));
+    }
+  }, [requirements, allocations, project, requirementsLoading, allocationsLoading]);
+
+  // New state for position-based allocation
+  const [allocatingPosition, setAllocatingPosition] = useState<any>(null);
+  const [editingPositionRequirement, setEditingPositionRequirement] = useState<any>(null);
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -198,6 +222,23 @@ export default function ProjectDetailPage() {
       setEditingRequirement(item.metadata);
     } else if (item.type === 'allocation' && item.metadata) {
       setEditingAllocation(item.metadata);
+    }
+  };
+
+  const handleAllocatePosition = (position: any) => {
+    setAllocatingPosition(position);
+  };
+
+  const handleEditPosition = (position: any) => {
+    setEditingPositionRequirement(position.requirement);
+  };
+
+  const handlePositionAllocation = async (data: { person_id: string; role_type_id: string; allocation_percentage: number; start_date: string; end_date: string }) => {
+    try {
+      await createAllocation({ ...data, project_id: projectId });
+      setAllocatingPosition(null);
+    } catch (error) {
+      // Error is handled in the hook
     }
   };
 
@@ -613,25 +654,16 @@ export default function ProjectDetailPage() {
           </TabsContent>
 
           <TabsContent value="timeline">
-            <InteractiveTimeline
-              title="Interactive Project Timeline"
-              items={getTimelineItems()}
+            <ProjectTimeline
+              title="Project Resource Timeline"
+              requirements={requirements}
+              allocations={allocations}
               config={timelineConfig}
               onConfigChange={setTimelineConfig}
-              onItemClick={handleTimelineItemClick}
-              onItemUpdate={async (item, newStartDate, newEndDate) => {
-                if (item.type === 'allocation' && item.metadata) {
-                  await updateAllocation(item.metadata.id, {
-                    ...item.metadata,
-                    start_date: newStartDate.toISOString().split('T')[0],
-                    end_date: newEndDate.toISOString().split('T')[0],
-                  });
-                }
-              }}
+              onAllocatePosition={handleAllocatePosition}
+              onEditPosition={handleEditPosition}
               projectStartDate={project ? new Date(project.start_date) : undefined}
               projectEndDate={project ? new Date(project.end_date) : undefined}
-              enableSnapping={true}
-              snapGranularity="day"
             />
           </TabsContent>
         </Tabs>
@@ -761,6 +793,56 @@ export default function ProjectDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Smart Allocation Dialog */}
+      <Dialog open={!!allocatingPosition} onOpenChange={() => setAllocatingPosition(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Allocate Person to Position</DialogTitle>
+            <DialogDescription>
+              Assign someone to this {allocatingPosition?.roleTypeName} position
+            </DialogDescription>
+          </DialogHeader>
+          {allocatingPosition && (
+            <SmartAllocationForm
+              prefilledData={{
+                role_type_id: allocatingPosition.requirement.role_type_id,
+                start_date: allocatingPosition.requirement.start_date,
+                end_date: allocatingPosition.requirement.end_date,
+              }}
+              onSubmit={handlePositionAllocation}
+              onCancel={() => setAllocatingPosition(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Position Requirement Dialog */}
+      <Dialog open={!!editingPositionRequirement} onOpenChange={() => setEditingPositionRequirement(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Position Requirement</DialogTitle>
+            <DialogDescription>
+              Update this specific position requirement
+            </DialogDescription>
+          </DialogHeader>
+          {editingPositionRequirement && (
+            <RequirementForm
+              initialData={{
+                role_type_id: editingPositionRequirement.role_type_id!,
+                required_count: 1, // Individual position
+                start_date: editingPositionRequirement.start_date!,
+                end_date: editingPositionRequirement.end_date!,
+              }}
+              onSubmit={async (data) => {
+                await handleUpdateRequirement(data);
+                setEditingPositionRequirement(null);
+              }}
+              onCancel={() => setEditingPositionRequirement(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
