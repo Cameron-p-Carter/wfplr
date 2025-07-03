@@ -19,8 +19,9 @@ interface AllocationFormProps {
     allocation_percentage: number;
     start_date: string;
     end_date: string;
+    requirement_id?: string;
   };
-  onSubmit: (data: { person_id: string; role_type_id: string; allocation_percentage: number; start_date: string; end_date: string }) => Promise<void>;
+  onSubmit: (data: { person_id: string; role_type_id: string; allocation_percentage: number; start_date: string; end_date: string; requirement_id?: string }) => Promise<void>;
   onCancel: () => void;
 }
 

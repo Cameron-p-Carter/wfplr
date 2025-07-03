@@ -106,13 +106,9 @@ export function ProjectTimeline({
     requirements.forEach(req => {
       if (!req.start_date || !req.end_date || !req.role_type_name) return;
       
-      // Find allocations that overlap with this requirement
+      // Find allocations that are directly linked to this requirement
       const relatedAllocations = allocations.filter(alloc => 
-        alloc.role_type_id === req.role_type_id &&
-        alloc.start_date && alloc.end_date &&
-        // Check for any overlap with requirement period
-        new Date(alloc.start_date!) < new Date(req.end_date!) &&
-        new Date(alloc.end_date!) > new Date(req.start_date!)
+        alloc.requirement_id === req.id
       );
 
       const requiredCount = req.required_count || 1;

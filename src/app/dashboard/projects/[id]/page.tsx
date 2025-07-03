@@ -233,7 +233,7 @@ export default function ProjectDetailPage() {
     setEditingPositionRequirement(position.requirement);
   };
 
-  const handlePositionAllocation = async (data: { person_id: string; role_type_id: string; allocation_percentage: number; start_date: string; end_date: string }) => {
+  const handlePositionAllocation = async (data: { person_id: string; role_type_id: string; allocation_percentage: number; start_date: string; end_date: string; requirement_id?: string }) => {
     try {
       await createAllocation({ ...data, project_id: projectId });
       setAllocatingPosition(null);
@@ -809,6 +809,7 @@ export default function ProjectDetailPage() {
                 role_type_id: allocatingPosition.requirement.role_type_id,
                 start_date: allocatingPosition.requirement.start_date,
                 end_date: allocatingPosition.requirement.end_date,
+                requirement_id: allocatingPosition.requirement.id,
               }}
               onSubmit={handlePositionAllocation}
               onCancel={() => setAllocatingPosition(null)}

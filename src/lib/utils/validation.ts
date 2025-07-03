@@ -70,6 +70,7 @@ const baseProjectAllocationSchema = z.object({
   project_id: z.string().min(1, "Project is required"),
   person_id: z.string().min(1, "Person is required"),
   role_type_id: z.string().min(1, "Role type is required"),
+  requirement_id: z.string().optional(),
   allocation_percentage: z.number().min(1, "Allocation must be at least 1%").max(100, "Allocation cannot exceed 100%"),
   start_date: z.string().min(1, "Start date is required"),
   end_date: z.string().min(1, "End date is required"),

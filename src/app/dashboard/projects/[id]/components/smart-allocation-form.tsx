@@ -20,11 +20,13 @@ interface SmartAllocationFormProps {
     allocation_percentage: number;
     start_date: string;
     end_date: string;
+    requirement_id?: string;
   };
   prefilledData?: {
     role_type_id: string;
     start_date: string;
     end_date: string;
+    requirement_id?: string;
   };
   onSubmit: (data: {
     person_id: string;
@@ -32,6 +34,7 @@ interface SmartAllocationFormProps {
     allocation_percentage: number;
     start_date: string;
     end_date: string;
+    requirement_id?: string;
   }) => Promise<void>;
   onCancel: () => void;
 }
@@ -49,6 +52,7 @@ export function SmartAllocationForm({ initialData, prefilledData, onSubmit, onCa
     allocation_percentage: initialData?.allocation_percentage || 100,
     start_date: prefilledData?.start_date || initialData?.start_date || "",
     end_date: prefilledData?.end_date || initialData?.end_date || "",
+    requirement_id: prefilledData?.requirement_id || initialData?.requirement_id || undefined,
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);

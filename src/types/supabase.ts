@@ -122,6 +122,7 @@ export type Database = {
           id: string
           person_id: string
           project_id: string
+          requirement_id: string | null
           role_type_id: string
           start_date: string
           updated_at: string | null
@@ -133,6 +134,7 @@ export type Database = {
           id?: string
           person_id: string
           project_id: string
+          requirement_id?: string | null
           role_type_id: string
           start_date: string
           updated_at?: string | null
@@ -144,6 +146,7 @@ export type Database = {
           id?: string
           person_id?: string
           project_id?: string
+          requirement_id?: string | null
           role_type_id?: string
           start_date?: string
           updated_at?: string | null
@@ -168,6 +171,20 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_allocations_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "project_requirements_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_allocations_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "project_resource_requirements"
             referencedColumns: ["id"]
           },
           {
@@ -325,6 +342,7 @@ export type Database = {
           person_name: string | null
           project_id: string | null
           project_name: string | null
+          requirement_id: string | null
           role_type_id: string | null
           role_type_name: string | null
           start_date: string | null
@@ -350,6 +368,20 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_allocations_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "project_requirements_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_allocations_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "project_resource_requirements"
             referencedColumns: ["id"]
           },
           {
