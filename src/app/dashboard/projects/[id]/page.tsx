@@ -17,6 +17,7 @@ import { useProjectAllocations } from "@/lib/hooks/use-project-allocations";
 import { RequirementForm } from "./components/requirement-form";
 import { AllocationForm } from "./components/allocation-form";
 import { Timeline } from "@/components/ui/timeline";
+import { InteractiveTimeline } from "@/components/ui/interactive-timeline";
 import { formatDate } from "@/lib/utils/date";
 import { getDefaultTimelineRange, TimelineItem, TimelineConfig } from "@/lib/utils/timeline";
 import type { Tables } from "@/types/supabase";
@@ -612,12 +613,25 @@ export default function ProjectDetailPage() {
           </TabsContent>
 
           <TabsContent value="timeline">
-            <Timeline
-              title="Project Timeline"
+            <InteractiveTimeline
+              title="Interactive Project Timeline"
               items={getTimelineItems()}
               config={timelineConfig}
               onConfigChange={setTimelineConfig}
               onItemClick={handleTimelineItemClick}
+              onItemUpdate={async (item, newStartDate, newEndDate) => {
+                if (item.type === 'allocation' && item.metadata) {
+                  await updateAllocation(item.metadata.id, {
+                    ...item.metadata,
+                    start_date: newStartDate.toISOString().split('T')[0],
+                    end_date: newEndDate.toISOString().split('T')[0],
+                  });
+                }
+              }}
+              projectStartDate={project ? new Date(project.start_date) : undefined}
+              projectEndDate={project ? new Date(project.end_date) : undefined}
+              enableSnapping={true}
+              snapGranularity="day"
             />
           </TabsContent>
         </Tabs>

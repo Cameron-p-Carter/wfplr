@@ -11,7 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getPersonById, getPersonAllocations, getPersonLeave } from "@/lib/supabase/queries";
 import { usePersonUtilization } from "@/lib/hooks/use-resource-analytics";
+import { useProjectAllocations } from "@/lib/hooks/use-project-allocations";
+import { useLeavePeriods } from "@/lib/hooks/use-leave-periods";
 import { Timeline } from "@/components/ui/timeline";
+import { InteractiveTimeline } from "@/components/ui/interactive-timeline";
 import { formatDate } from "@/lib/utils/date";
 import { getDefaultTimelineRange, TimelineItem, TimelineConfig } from "@/lib/utils/timeline";
 import type { Tables } from "@/types/supabase";
@@ -29,6 +32,8 @@ export default function PersonDetailPage() {
   const [leaveLoading, setLeaveLoading] = useState(true);
   
   const { utilization, loading: utilizationLoading } = usePersonUtilization(personId);
+  const { update: updateAllocation } = useProjectAllocations(''); // We'll pass the project ID when updating
+  const { update: updateLeave } = useLeavePeriods();
   
   const [timelineConfig, setTimelineConfig] = useState<TimelineConfig>(() => ({
     ...getDefaultTimelineRange(),
@@ -378,12 +383,39 @@ export default function PersonDetailPage() {
           </TabsContent>
 
           <TabsContent value="timeline">
-            <Timeline
-              title="Person Timeline"
+            <InteractiveTimeline
+              title="Interactive Person Timeline"
               items={getTimelineItems()}
               config={timelineConfig}
               onConfigChange={setTimelineConfig}
               onItemClick={handleTimelineItemClick}
+              onItemUpdate={async (item, newStartDate, newEndDate) => {
+                if (item.type === 'allocation' && item.metadata) {
+                  // Update allocation using the existing hook
+                  await updateAllocation(item.metadata.id, {
+                    ...item.metadata,
+                    start_date: newStartDate.toISOString().split('T')[0],
+                    end_date: newEndDate.toISOString().split('T')[0],
+                  });
+                  // Refresh the data
+                  const updatedAllocations = await getPersonAllocations(personId);
+                  setAllocations(updatedAllocations);
+                } else if (item.type === 'leave' && item.metadata) {
+                  // Update leave period using the existing hook
+                  await updateLeave(item.metadata.id, {
+                    start_date: newStartDate.toISOString().split('T')[0],
+                    end_date: newEndDate.toISOString().split('T')[0],
+                    person_id: personId,
+                    status: item.metadata.status,
+                    notes: item.metadata.notes,
+                  });
+                  // Refresh the data
+                  const updatedLeave = await getPersonLeave(personId);
+                  setLeavePeriods(updatedLeave);
+                }
+              }}
+              enableSnapping={true}
+              snapGranularity="day"
             />
           </TabsContent>
         </Tabs>
