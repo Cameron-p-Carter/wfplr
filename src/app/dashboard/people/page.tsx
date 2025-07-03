@@ -11,11 +11,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { usePeople } from "@/lib/hooks/use-people";
+import { useResourceAnalytics } from "@/lib/hooks/use-resource-analytics";
 import { PersonForm } from "./components/person-form";
 import type { Tables } from "@/types/supabase";
 
 export default function PeoplePage() {
   const { people, loading, create, update, remove } = usePeople();
+  const { peopleUtilization, loading: analyticsLoading } = useResourceAnalytics();
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Tables<"people_with_roles"> | null>(null);
@@ -26,6 +28,23 @@ export default function PeoplePage() {
     person.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     person.role_type_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const getPersonUtilization = (personId: string) => {
+    const utilization = peopleUtilization.find(u => u.person_id === personId);
+    return utilization ? utilization.utilization_percentage : 0;
+  };
+
+  const getUtilizationBadge = (utilization: number) => {
+    if (utilization > 100) {
+      return <Badge variant="destructive">{utilization}%</Badge>;
+    } else if (utilization >= 80) {
+      return <Badge variant="default">{utilization}%</Badge>;
+    } else if (utilization >= 50) {
+      return <Badge variant="secondary">{utilization}%</Badge>;
+    } else {
+      return <Badge variant="outline">{utilization}%</Badge>;
+    }
+  };
 
   const handleCreate = async (data: { name: string; role_type_id: string }) => {
     try {
@@ -122,35 +141,49 @@ export default function PeoplePage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredPeople.map((person) => (
-                    <TableRow key={person.id}>
-                      <TableCell className="font-medium">{person.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{person.role_type_name}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">0%</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingPerson(person)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeletingPerson(person)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                      filteredPeople.map((person) => {
+                        const utilization = getPersonUtilization(person.id!);
+                        return (
+                          <TableRow key={person.id}>
+                            <TableCell className="font-medium">
+                              <button
+                                onClick={() => window.location.href = `/dashboard/people/${person.id}`}
+                                className="text-left hover:underline"
+                              >
+                                {person.name}
+                              </button>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{person.role_type_name}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              {analyticsLoading ? (
+                                <Skeleton className="h-5 w-12" />
+                              ) : (
+                                getUtilizationBadge(utilization)
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingPerson(person)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setDeletingPerson(person)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                 )}
               </TableBody>
             </Table>

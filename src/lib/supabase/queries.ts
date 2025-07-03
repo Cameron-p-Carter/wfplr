@@ -14,6 +14,204 @@ export async function getRoleTypes() {
   return data;
 }
 
+// Project Allocations
+export async function getProjectAllocations(projectId: string) {
+  const { data, error } = await supabase
+    .from("project_allocations_detailed")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("start_date");
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function getPersonAllocations(personId: string) {
+  const { data, error } = await supabase
+    .from("project_allocations_detailed")
+    .select("*")
+    .eq("person_id", personId)
+    .order("start_date");
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function getAllAllocations() {
+  const { data, error } = await supabase
+    .from("project_allocations_detailed")
+    .select("*")
+    .order("start_date");
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function createProjectAllocation(allocation: TablesInsert<"project_allocations">) {
+  const { data, error } = await supabase
+    .from("project_allocations")
+    .insert(allocation)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProjectAllocation(id: string, allocation: TablesUpdate<"project_allocations">) {
+  const { data, error } = await supabase
+    .from("project_allocations")
+    .update(allocation)
+    .eq("id", id)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteProjectAllocation(id: string) {
+  const { error } = await supabase
+    .from("project_allocations")
+    .delete()
+    .eq("id", id);
+  
+  if (error) throw error;
+}
+
+// Utility functions for calculations
+export async function getPersonUtilization(personId: string, startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from("project_allocations")
+    .select("allocation_percentage, start_date, end_date")
+    .eq("person_id", personId)
+    .gte("end_date", startDate)
+    .lte("start_date", endDate);
+  
+  if (error) throw error;
+  
+  // Calculate overlapping utilization
+  let totalUtilization = 0;
+  if (data) {
+    for (const allocation of data) {
+      const allocStart = new Date(allocation.start_date);
+      const allocEnd = new Date(allocation.end_date);
+      const queryStart = new Date(startDate);
+      const queryEnd = new Date(endDate);
+      
+      // Check if there's overlap
+      if (allocStart <= queryEnd && allocEnd >= queryStart) {
+        totalUtilization += allocation.allocation_percentage;
+      }
+    }
+  }
+  
+  return Math.min(totalUtilization, 100); // Cap at 100%
+}
+
+export async function getProjectGaps(projectId: string) {
+  // Get requirements
+  const requirements = await getProjectRequirements(projectId);
+  
+  // Get allocations
+  const allocations = await getProjectAllocations(projectId);
+  
+  // Calculate gaps
+  const gaps = [];
+  
+  for (const requirement of requirements) {
+    if (!requirement.start_date || !requirement.end_date || !requirement.role_type_id) continue;
+    
+    // Find allocations that match this requirement
+    const matchingAllocations = allocations.filter(allocation => 
+      allocation.role_type_id === requirement.role_type_id &&
+      allocation.start_date && allocation.end_date &&
+      new Date(allocation.start_date) <= new Date(requirement.end_date) &&
+      new Date(allocation.end_date) >= new Date(requirement.start_date)
+    );
+    
+    // Calculate allocated count (sum of allocation percentages / 100)
+    const allocatedCount = matchingAllocations.reduce((sum, allocation) => 
+      sum + (allocation.allocation_percentage || 0) / 100, 0
+    );
+    
+    const gap = (requirement.required_count || 0) - allocatedCount;
+    
+    if (gap > 0) {
+      gaps.push({
+        requirement_id: requirement.id,
+        role_type_id: requirement.role_type_id,
+        role_type_name: requirement.role_type_name,
+        required_count: requirement.required_count,
+        allocated_count: allocatedCount,
+        gap_count: gap,
+        start_date: requirement.start_date,
+        end_date: requirement.end_date,
+      });
+    }
+  }
+  
+  return gaps;
+}
+
+export async function getOverAllocatedPeople() {
+  const { data: allocations, error } = await supabase
+    .from("project_allocations_detailed")
+    .select("*");
+  
+  if (error) throw error;
+  
+  const overAllocated = [];
+  const peopleMap = new Map();
+  
+  // Group allocations by person and date ranges
+  for (const allocation of allocations) {
+    if (!allocation.person_id || !allocation.start_date || !allocation.end_date) continue;
+    
+    const personId = allocation.person_id;
+    if (!peopleMap.has(personId)) {
+      peopleMap.set(personId, {
+        person_id: personId,
+        person_name: allocation.person_name,
+        allocations: []
+      });
+    }
+    
+    peopleMap.get(personId).allocations.push(allocation);
+  }
+  
+  // Check for over-allocation
+  for (const [personId, personData] of peopleMap) {
+    const allocations = personData.allocations;
+    
+    // Find overlapping periods
+    for (let i = 0; i < allocations.length; i++) {
+      for (let j = i + 1; j < allocations.length; j++) {
+        const alloc1 = allocations[i];
+        const alloc2 = allocations[j];
+        
+        // Check if periods overlap
+        if (new Date(alloc1.start_date!) <= new Date(alloc2.end_date!) &&
+            new Date(alloc1.end_date!) >= new Date(alloc2.start_date!)) {
+          
+          const totalAllocation = (alloc1.allocation_percentage || 0) + (alloc2.allocation_percentage || 0);
+          
+          if (totalAllocation > 100) {
+            overAllocated.push({
+              person_id: personId,
+              person_name: personData.person_name,
+              total_allocation: totalAllocation,
+              conflicting_allocations: [alloc1, alloc2]
+            });
+          }
+        }
+      }
+    }
+  }
+  
+  return overAllocated;
+}
+
 export async function getRoleTypeById(id: string) {
   const { data, error } = await supabase
     .from("role_types")

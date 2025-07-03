@@ -66,9 +66,38 @@ export const leavePeriodSchema = z.object({
   path: ["end_date"],
 });
 
+const baseProjectAllocationSchema = z.object({
+  project_id: z.string().min(1, "Project is required"),
+  person_id: z.string().min(1, "Person is required"),
+  role_type_id: z.string().min(1, "Role type is required"),
+  allocation_percentage: z.number().min(1, "Allocation must be at least 1%").max(100, "Allocation cannot exceed 100%"),
+  start_date: z.string().min(1, "Start date is required"),
+  end_date: z.string().min(1, "End date is required"),
+});
+
+export const projectAllocationSchema = baseProjectAllocationSchema.refine((data) => {
+  const startDate = new Date(data.start_date);
+  const endDate = new Date(data.end_date);
+  return endDate > startDate;
+}, {
+  message: "End date must be after start date",
+  path: ["end_date"],
+});
+
+export const projectAllocationFormSchema = baseProjectAllocationSchema.omit({ project_id: true }).refine((data) => {
+  const startDate = new Date(data.start_date);
+  const endDate = new Date(data.end_date);
+  return endDate > startDate;
+}, {
+  message: "End date must be after start date",
+  path: ["end_date"],
+});
+
 export type RoleTypeFormData = z.infer<typeof roleTypeSchema>;
 export type PersonFormData = z.infer<typeof personSchema>;
 export type ProjectFormData = z.infer<typeof projectSchema>;
 export type ProjectRequirementFormData = z.infer<typeof projectRequirementSchema>;
 export type ProjectRequirementFormFormData = z.infer<typeof projectRequirementFormSchema>;
 export type LeavePeriodFormData = z.infer<typeof leavePeriodSchema>;
+export type ProjectAllocationFormData = z.infer<typeof projectAllocationSchema>;
+export type ProjectAllocationFormFormData = z.infer<typeof projectAllocationFormSchema>;
