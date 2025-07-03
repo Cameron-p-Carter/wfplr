@@ -191,10 +191,12 @@ export function ProjectTimeline({
         >
           {/* Requirement Header */}
           <div className="p-2 border-b border-gray-300 bg-gray-200 rounded-t-lg">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-gray-700">
-                {req.role_type_name} ({req.required_count} needed)
-              </span>
+            <div className="flex flex-col space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-700">
+                  {req.role_type_name} ({req.required_count} needed)
+                </span>
+              </div>
               <span className="text-xs text-gray-500">
                 {new Date(req.start_date!).toLocaleDateString()} - {new Date(req.end_date!).toLocaleDateString()}
               </span>
@@ -262,23 +264,22 @@ export function ProjectTimeline({
                         <Plus className="h-3 w-3" />
                       </Button>
                     )}
+                    {onEditPosition && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 hover:bg-blue-100"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditPosition(position);
+                        }}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-            
-            {isHovered && onEditPosition && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute right-1 top-0 h-4 w-4 p-0 hover:bg-blue-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditPosition(position);
-                }}
-              >
-                <Edit className="h-3 w-3" />
-              </Button>
             )}
           </div>
         </TooltipTrigger>
