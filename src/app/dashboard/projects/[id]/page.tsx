@@ -706,6 +706,10 @@ export default function ProjectDetailPage() {
               onAllocatePosition={handleAllocatePosition}
               onEditPosition={handleEditPosition}
               onDeleteOrphanedAllocation={removeAllocation}
+              onEditAllocation={setEditingAllocation}
+              onDeleteAllocation={removeAllocation}
+              onEditRequirement={setEditingRequirement}
+              onDeleteRequirement={setDeletingRequirement}
               projectStartDate={project ? new Date(project.start_date) : undefined}
               projectEndDate={project ? new Date(project.end_date) : undefined}
             />

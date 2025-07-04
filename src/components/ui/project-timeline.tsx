@@ -47,6 +47,10 @@ interface ProjectTimelineProps {
   onAllocatePosition?: (position: RequirementPosition) => void;
   onEditPosition?: (position: RequirementPosition) => void;
   onDeleteOrphanedAllocation?: (allocationId: string) => void;
+  onEditAllocation?: (allocation: Tables<"project_allocations_detailed">) => void;
+  onDeleteAllocation?: (allocationId: string) => void;
+  onEditRequirement?: (requirement: Tables<"project_requirements_detailed">) => void;
+  onDeleteRequirement?: (requirement: Tables<"project_requirements_detailed">) => void;
   className?: string;
   projectStartDate?: Date;
   projectEndDate?: Date;
@@ -61,11 +65,16 @@ export function ProjectTimeline({
   onAllocatePosition,
   onEditPosition,
   onDeleteOrphanedAllocation,
+  onEditAllocation,
+  onDeleteAllocation,
+  onEditRequirement,
+  onDeleteRequirement,
   className,
   projectStartDate,
   projectEndDate
 }: ProjectTimelineProps) {
   const [hoveredPosition, setHoveredPosition] = useState<string | null>(null);
+  const [hoveredRequirement, setHoveredRequirement] = useState<string | null>(null);
   
   const timelineRef = useRef<HTMLDivElement>(null);
   const columns = generateTimelineColumns(config);
@@ -256,11 +265,15 @@ export function ProjectTimeline({
           }}
         >
           {/* Requirement Header */}
-          <div className={`p-2 border-b rounded-t-lg ${
-            isOrphaned 
-              ? 'border-red-300 bg-red-100' 
-              : 'border-gray-300 bg-gray-200'
-          }`}>
+          <div 
+            className={`p-2 border-b rounded-t-lg cursor-pointer transition-colors duration-200 ${
+              isOrphaned 
+                ? 'border-red-300 bg-red-100' 
+                : 'border-gray-300 bg-gray-200 hover:bg-gray-300'
+            }`}
+            onMouseEnter={() => setHoveredRequirement(req.id!)}
+            onMouseLeave={() => setHoveredRequirement(null)}
+          >
             <div className="flex flex-col space-y-1">
               <div className="flex items-center justify-between">
                 <span className={`text-xs font-medium ${
@@ -268,11 +281,44 @@ export function ProjectTimeline({
                 }`}>
                   {req.role_type_name} {isOrphaned ? '(No Requirement)' : `(${req.required_count} needed)`}
                 </span>
-                {isOrphaned && (
-                  <Badge variant="destructive" className="text-xs">
-                    Orphaned
-                  </Badge>
-                )}
+                <div className="flex items-center space-x-1">
+                  {isOrphaned && (
+                    <Badge variant="destructive" className="text-xs">
+                      Orphaned
+                    </Badge>
+                  )}
+                  {/* Show edit/delete buttons for non-orphaned requirements when hovered */}
+                  {!isOrphaned && hoveredRequirement === req.id && !req.auto_generated_type && (
+                    <>
+                      {onEditRequirement && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 hover:bg-blue-200"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditRequirement(req);
+                          }}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      )}
+                      {onDeleteRequirement && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 hover:bg-red-200"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteRequirement(req);
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
               <span className={`text-xs ${
                 isOrphaned ? 'text-red-500' : 'text-gray-500'
@@ -385,31 +431,70 @@ export function ProjectTimeline({
                 </Button>
               ) : (
                 <>
-                  {onAllocatePosition && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 hover:bg-gray-700 text-white hover:text-white"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onAllocatePosition(position);
-                      }}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  )}
-                  {onEditPosition && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 hover:bg-gray-700 text-white hover:text-white"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditPosition(position);
-                      }}
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
+                  {/* For allocated positions, show edit/delete allocation buttons */}
+                  {isAllocated && position.allocatedPerson ? (
+                    <>
+                      {onEditAllocation && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 hover:bg-blue-700 text-white hover:text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Find the allocation object to pass to the handler
+                            const allocation = allocations.find(a => a.id === position.allocatedPerson!.allocationId);
+                            if (allocation) {
+                              onEditAllocation(allocation);
+                            }
+                          }}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      )}
+                      {onDeleteAllocation && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 hover:bg-red-700 text-white hover:text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteAllocation(position.allocatedPerson!.allocationId);
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    /* For empty positions, show allocate/edit requirement buttons */
+                    <>
+                      {onAllocatePosition && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 hover:bg-green-700 text-white hover:text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAllocatePosition(position);
+                          }}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      )}
+                      {onEditPosition && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 hover:bg-blue-700 text-white hover:text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditPosition(position);
+                          }}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </>
                   )}
                 </>
               )}
