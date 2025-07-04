@@ -30,6 +30,7 @@ interface SmartAllocationFormProps {
     start_date: string;
     end_date: string;
     requirement_id?: string;
+    requiredCount?: number;
   };
   onSubmit: (data: {
     person_id: string;
@@ -49,13 +50,25 @@ interface PersonWithUtilization extends Tables<"people_with_roles"> {
 }
 
 export function SmartAllocationForm({ initialData, prefilledData, onSubmit, onCancel }: SmartAllocationFormProps) {
-  const [formData, setFormData] = useState({
-    person_id: initialData?.person_id || "",
-    role_type_id: prefilledData?.role_type_id || initialData?.role_type_id || "",
-    allocation_percentage: initialData?.allocation_percentage || 100,
-    start_date: prefilledData?.start_date || initialData?.start_date || "",
-    end_date: prefilledData?.end_date || initialData?.end_date || "",
-    requirement_id: prefilledData?.requirement_id || initialData?.requirement_id || undefined,
+  const [formData, setFormData] = useState(() => {
+    // Calculate smart default allocation percentage
+    let defaultAllocation = initialData?.allocation_percentage || 100;
+    
+    // If we have prefilled data with a requirement_id, we might be allocating to a gap
+    // In that case, use the requirement's needed count as the default percentage
+    if (prefilledData?.requirement_id && prefilledData.requiredCount) {
+      // Convert required_count (e.g., 0.2) to percentage (e.g., 20%)
+      defaultAllocation = Math.round(prefilledData.requiredCount * 100);
+    }
+    
+    return {
+      person_id: initialData?.person_id || "",
+      role_type_id: prefilledData?.role_type_id || initialData?.role_type_id || "",
+      allocation_percentage: defaultAllocation,
+      start_date: prefilledData?.start_date || initialData?.start_date || "",
+      end_date: prefilledData?.end_date || initialData?.end_date || "",
+      requirement_id: prefilledData?.requirement_id || initialData?.requirement_id || undefined,
+    };
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);

@@ -810,6 +810,7 @@ export default function ProjectDetailPage() {
                 start_date: allocatingPosition.requirement.start_date,
                 end_date: allocatingPosition.requirement.end_date,
                 requirement_id: allocatingPosition.requirement.id,
+                requiredCount: allocatingPosition.requirement.required_count,
               }}
               onSubmit={handlePositionAllocation}
               onCancel={() => setAllocatingPosition(null)}

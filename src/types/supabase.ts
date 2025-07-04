@@ -198,36 +198,79 @@ export type Database = {
       }
       project_resource_requirements: {
         Row: {
+          auto_generated_type:
+            | Database["public"]["Enums"]["auto_generated_type"]
+            | null
           created_at: string | null
           end_date: string
           id: string
+          parent_requirement_id: string | null
           project_id: string
           required_count: number
           role_type_id: string
+          source_allocation_id: string | null
           start_date: string
           updated_at: string | null
         }
         Insert: {
+          auto_generated_type?:
+            | Database["public"]["Enums"]["auto_generated_type"]
+            | null
           created_at?: string | null
           end_date: string
           id?: string
+          parent_requirement_id?: string | null
           project_id: string
           required_count: number
           role_type_id: string
+          source_allocation_id?: string | null
           start_date: string
           updated_at?: string | null
         }
         Update: {
+          auto_generated_type?:
+            | Database["public"]["Enums"]["auto_generated_type"]
+            | null
           created_at?: string | null
           end_date?: string
           id?: string
+          parent_requirement_id?: string | null
           project_id?: string
           required_count?: number
           role_type_id?: string
+          source_allocation_id?: string | null
           start_date?: string
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_parent_requirement"
+            columns: ["parent_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "project_requirements_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_parent_requirement"
+            columns: ["parent_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "project_resource_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_source_allocation"
+            columns: ["source_allocation_id"]
+            isOneToOne: false
+            referencedRelation: "project_allocations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_source_allocation"
+            columns: ["source_allocation_id"]
+            isOneToOne: false
+            referencedRelation: "project_allocations_detailed"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_resource_requirements_project_id_fkey"
             columns: ["project_id"]
@@ -395,18 +438,51 @@ export type Database = {
       }
       project_requirements_detailed: {
         Row: {
+          auto_generated_type:
+            | Database["public"]["Enums"]["auto_generated_type"]
+            | null
           created_at: string | null
           end_date: string | null
           id: string | null
+          parent_requirement_id: string | null
           project_id: string | null
           project_name: string | null
           required_count: number | null
           role_type_id: string | null
           role_type_name: string | null
+          source_allocation_id: string | null
           start_date: string | null
           updated_at: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_parent_requirement"
+            columns: ["parent_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "project_requirements_detailed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_parent_requirement"
+            columns: ["parent_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "project_resource_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_source_allocation"
+            columns: ["source_allocation_id"]
+            isOneToOne: false
+            referencedRelation: "project_allocations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_source_allocation"
+            columns: ["source_allocation_id"]
+            isOneToOne: false
+            referencedRelation: "project_allocations_detailed"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_resource_requirements_project_id_fkey"
             columns: ["project_id"]
@@ -431,6 +507,7 @@ export type Database = {
       }
     }
     Enums: {
+      auto_generated_type: "leave_coverage" | "partial_gap"
       leave_status: "pending" | "approved" | "unapproved"
     }
     CompositeTypes: {
@@ -550,6 +627,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      auto_generated_type: ["leave_coverage", "partial_gap"],
       leave_status: ["pending", "approved", "unapproved"],
     },
   },
