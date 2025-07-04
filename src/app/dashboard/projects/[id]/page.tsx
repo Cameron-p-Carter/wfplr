@@ -128,6 +128,7 @@ export default function ProjectDetailPage() {
     try {
       setIsDeleting(true);
       await remove(deletingRequirement.id!);
+      await refetchAllocations(); // Refresh allocations to show any newly orphaned allocations
       setDeletingRequirement(null);
     } catch (error) {
       // Error is handled in the hook

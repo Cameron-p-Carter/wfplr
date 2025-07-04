@@ -241,7 +241,8 @@ export function ProjectTimeline({
       timelineWidth
     );
 
-    const blockHeight = Math.max(60, positions.length * 30 + 20); // Dynamic height based on positions
+    const blockHeight = Math.max(80, positions.length * 40 + 30); // Increased height for better spacing
+    const topMargin = blockIndex === 0 ? 20 : 0; // Extra top margin for first block
     
     return (
       <div
@@ -249,6 +250,7 @@ export function ProjectTimeline({
         className="relative mb-8"
         style={{ 
           height: `${blockHeight}px`,
+          marginTop: `${topMargin}px`,
         }}
       >
         {/* Requirement Background */}
@@ -607,8 +609,49 @@ export function ProjectTimeline({
               <div 
                 ref={timelineRef}
                 className="relative bg-white"
-                style={{ height: `${Math.max(totalHeight, 80)}px` }}
+                style={{ height: `${Math.max(totalHeight, 400)}px` }}
               >
+                {/* Project Start/End Date Markers */}
+                {projectStartDate && (
+                  <div
+                    className="absolute top-0 bottom-0 border-l-2 border-green-500 z-10"
+                    style={{
+                      left: `${calculateItemPosition(
+                        { 
+                          id: 'project-start', 
+                          title: 'Project Start', 
+                          startDate: projectStartDate, 
+                          endDate: projectStartDate, 
+                          type: 'requirement' 
+                        },
+                        config.startDate,
+                        config.endDate,
+                        timelineWidth
+                      ).left}px`,
+                    }}
+                  />
+                )}
+                
+                {projectEndDate && (
+                  <div
+                    className="absolute top-0 bottom-0 border-l-2 border-red-500 z-10"
+                    style={{
+                      left: `${calculateItemPosition(
+                        { 
+                          id: 'project-end', 
+                          title: 'Project End', 
+                          startDate: projectEndDate, 
+                          endDate: projectEndDate, 
+                          type: 'requirement' 
+                        },
+                        config.startDate,
+                        config.endDate,
+                        timelineWidth
+                      ).left}px`,
+                    }}
+                  />
+                )}
+
                 {requirementsWithAllocations.length === 0 ? (
                   <div className="flex items-center justify-center h-20 text-muted-foreground">
                     No requirements defined yet
