@@ -437,6 +437,27 @@ export async function getPendingLeave() {
   return data;
 }
 
+// Check for leave conflicts during allocation
+export async function getPersonLeaveConflicts(personId: string, startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from("leave_periods")
+    .select("*")
+    .eq("person_id", personId)
+    .gte("end_date", startDate)
+    .lte("start_date", endDate);
+  
+  if (error) throw error;
+  
+  // Separate by leave status
+  const conflicts = {
+    pending: data?.filter(leave => leave.status === "pending") || [],
+    approved: data?.filter(leave => leave.status === "approved") || [],
+    unapproved: data?.filter(leave => leave.status === "unapproved") || []
+  };
+  
+  return conflicts;
+}
+
 // People
 export async function getPeople() {
   const { data, error } = await supabase

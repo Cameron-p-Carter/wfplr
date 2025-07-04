@@ -7,10 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, User, Percent } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Calendar, User, Percent, AlertTriangle, AlertCircle } from "lucide-react";
 import { usePeople } from "@/lib/hooks/use-people";
 import { useResourceAnalytics } from "@/lib/hooks/use-resource-analytics";
 import { formatDate } from "@/lib/utils/date";
+import { getPersonLeaveConflicts } from "@/lib/supabase/queries";
 import type { Tables } from "@/types/supabase";
 
 interface SmartAllocationFormProps {
@@ -56,6 +59,12 @@ export function SmartAllocationForm({ initialData, prefilledData, onSubmit, onCa
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [leaveConflicts, setLeaveConflicts] = useState<{
+    pending: Tables<"leave_periods">[];
+    approved: Tables<"leave_periods">[];
+    unapproved: Tables<"leave_periods">[];
+  } | null>(null);
+  const [showApprovedLeaveDialog, setShowApprovedLeaveDialog] = useState(false);
   const { people, loading: peopleLoading } = usePeople();
   const { peopleUtilization, loading: utilizationLoading } = useResourceAnalytics();
 
@@ -104,10 +113,43 @@ export function SmartAllocationForm({ initialData, prefilledData, onSubmit, onCa
 
   const sortedPeople = getSortedPeople();
 
+  // Check for leave conflicts when person or dates change
+  useEffect(() => {
+    const checkLeaveConflicts = async () => {
+      if (formData.person_id && formData.start_date && formData.end_date) {
+        try {
+          const conflicts = await getPersonLeaveConflicts(
+            formData.person_id,
+            formData.start_date,
+            formData.end_date
+          );
+          setLeaveConflicts(conflicts);
+        } catch (error) {
+          console.error("Failed to check leave conflicts:", error);
+          setLeaveConflicts(null);
+        }
+      } else {
+        setLeaveConflicts(null);
+      }
+    };
+
+    checkLeaveConflicts();
+  }, [formData.person_id, formData.start_date, formData.end_date]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.person_id || !formData.role_type_id) return;
 
+    // Check for approved leave conflicts before submitting
+    if (leaveConflicts?.approved && leaveConflicts.approved.length > 0) {
+      setShowApprovedLeaveDialog(true);
+      return;
+    }
+
+    await submitAllocation();
+  };
+
+  const submitAllocation = async () => {
     try {
       setIsSubmitting(true);
       await onSubmit(formData);
@@ -116,6 +158,11 @@ export function SmartAllocationForm({ initialData, prefilledData, onSubmit, onCa
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleApprovedLeaveConfirm = async () => {
+    setShowApprovedLeaveDialog(false);
+    await submitAllocation();
   };
 
   const getPersonBadgeVariant = (person: PersonWithUtilization) => {
@@ -330,6 +377,43 @@ export function SmartAllocationForm({ initialData, prefilledData, onSubmit, onCa
 
       <Separator />
 
+      {/* Leave Conflict Warnings */}
+      {leaveConflicts && (leaveConflicts.pending.length > 0 || leaveConflicts.approved.length > 0) && (
+        <div className="space-y-2">
+          {leaveConflicts.pending.length > 0 && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Caution:</strong> This person has pending leave during{" "}
+                {leaveConflicts.pending.map((leave, index) => (
+                  <span key={leave.id}>
+                    {index > 0 && ", "}
+                    {formatDate(leave.start_date)} - {formatDate(leave.end_date)}
+                  </span>
+                ))}
+                . The leave request is still pending approval.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {leaveConflicts.approved.length > 0 && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Warning:</strong> This person has approved leave during{" "}
+                {leaveConflicts.approved.map((leave, index) => (
+                  <span key={leave.id}>
+                    {index > 0 && ", "}
+                    {formatDate(leave.start_date)} - {formatDate(leave.end_date)}
+                  </span>
+                ))}
+                . They will not be available during this period.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+      )}
+
       {/* Person Selection */}
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Select Person</h3>
@@ -352,6 +436,36 @@ export function SmartAllocationForm({ initialData, prefilledData, onSubmit, onCa
           {isSubmitting ? "Creating..." : "Create Allocation"}
         </Button>
       </div>
+
+      {/* Approved Leave Confirmation Dialog */}
+      <AlertDialog open={showApprovedLeaveDialog} onOpenChange={setShowApprovedLeaveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approved Leave Conflict</AlertDialogTitle>
+            <AlertDialogDescription>
+              This person has approved leave during{" "}
+              {leaveConflicts?.approved.map((leave, index) => (
+                <span key={leave.id}>
+                  {index > 0 && ", "}
+                  <strong>{formatDate(leave.start_date)} - {formatDate(leave.end_date)}</strong>
+                </span>
+              ))}
+              . They will not be available during this period.
+              <br /><br />
+              Are you sure you want to proceed with this allocation?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleApprovedLeaveConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Proceed Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </form>
   );
 }
