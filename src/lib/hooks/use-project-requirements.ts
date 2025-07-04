@@ -73,7 +73,7 @@ export function useProjectRequirements(projectId: string) {
   const remove = async (id: string) => {
     try {
       await deleteProjectRequirement(id);
-      setRequirements(prev => prev.filter(req => req.id !== id));
+      await fetchRequirements(); // Refetch to get the updated view and handle cascading deletions
       toast.success("Resource requirement deleted successfully");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to delete resource requirement";

@@ -69,8 +69,7 @@ export function useProjectAllocations(projectId: string) {
   const remove = async (id: string) => {
     try {
       await deleteProjectAllocation(id);
-      setAllocations(prev => prev.filter(alloc => alloc.id !== id));
-      await fetchAllocations(); // Refetch gaps
+      await fetchAllocations(); // Refetch all data to ensure consistency
       toast.success("Allocation deleted successfully");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to delete allocation";
