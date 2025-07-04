@@ -31,8 +31,8 @@ export default function ProjectDetailPage() {
   
   const [project, setProject] = useState<Tables<"projects"> | null>(null);
   const [projectLoading, setProjectLoading] = useState(true);
-  const { requirements, groupedRequirements, loading: requirementsLoading, create, update, remove } = useProjectRequirements(projectId);
-  const { allocations, gaps, loading: allocationsLoading, create: createAllocation, update: updateAllocation, remove: removeAllocation } = useProjectAllocations(projectId);
+  const { requirements, groupedRequirements, loading: requirementsLoading, create, update, remove, refetch: refetchRequirements } = useProjectRequirements(projectId);
+  const { allocations, gaps, loading: allocationsLoading, create: createAllocation, update: updateAllocation, remove: removeAllocation, refetch: refetchAllocations } = useProjectAllocations(projectId);
   
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingRequirement, setEditingRequirement] = useState<Tables<"project_requirements_detailed"> | null>(null);
@@ -139,6 +139,7 @@ export default function ProjectDetailPage() {
   const handleCreateAllocation = async (data: { person_id: string; role_type_id: string; allocation_percentage: number; start_date: string; end_date: string }) => {
     try {
       await createAllocation({ ...data, project_id: projectId });
+      await refetchRequirements(); // Refresh requirements to show any auto-generated requirements
       setShowCreateAllocationDialog(false);
     } catch (error) {
       // Error is handled in the hook
@@ -149,6 +150,7 @@ export default function ProjectDetailPage() {
     if (!editingAllocation) return;
     try {
       await updateAllocation(editingAllocation.id!, { ...data, project_id: projectId });
+      await refetchRequirements(); // Refresh requirements to show any auto-generated requirements
       setEditingAllocation(null);
     } catch (error) {
       // Error is handled in the hook
@@ -160,6 +162,7 @@ export default function ProjectDetailPage() {
     try {
       setIsDeletingAllocation(true);
       await removeAllocation(deletingAllocation.id!);
+      await refetchRequirements(); // Refresh requirements to remove any cleaned up auto-generated requirements
       setDeletingAllocation(null);
     } catch (error) {
       // Error is handled in the hook
@@ -236,6 +239,7 @@ export default function ProjectDetailPage() {
   const handlePositionAllocation = async (data: { person_id: string; role_type_id: string; allocation_percentage: number; start_date: string; end_date: string; requirement_id?: string }) => {
     try {
       await createAllocation({ ...data, project_id: projectId });
+      await refetchRequirements(); // Refresh requirements to show any auto-generated requirements
       setAllocatingPosition(null);
     } catch (error) {
       // Error is handled in the hook
