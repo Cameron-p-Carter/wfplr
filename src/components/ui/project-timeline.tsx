@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ChevronLeft, ChevronRight, Calendar, Clock, Plus, Edit } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Clock, Plus, Edit, Trash2 } from "lucide-react";
 import { 
   TimelineConfig, 
   generateTimelineColumns, 
@@ -46,6 +46,7 @@ interface ProjectTimelineProps {
   onConfigChange?: (config: TimelineConfig) => void;
   onAllocatePosition?: (position: RequirementPosition) => void;
   onEditPosition?: (position: RequirementPosition) => void;
+  onDeleteOrphanedAllocation?: (allocationId: string) => void;
   className?: string;
   projectStartDate?: Date;
   projectEndDate?: Date;
@@ -59,6 +60,7 @@ export function ProjectTimeline({
   onConfigChange, 
   onAllocatePosition,
   onEditPosition,
+  onDeleteOrphanedAllocation,
   className,
   projectStartDate,
   projectEndDate
@@ -148,6 +150,65 @@ export function ProjectTimeline({
       });
     });
     
+    // Add orphaned allocations (allocations with no requirement)
+    const orphanedAllocations = allocations.filter(alloc => !alloc.requirement_id);
+    
+    if (orphanedAllocations.length > 0) {
+      // Create a special "Orphaned Allocations" section
+      const orphanedPositions: RequirementPosition[] = orphanedAllocations.map((allocation, index) => ({
+        id: `orphan-${allocation.id}`,
+        requirementId: 'orphaned',
+        positionIndex: index,
+        roleTypeName: allocation.role_type_name || 'Unknown Role',
+        startDate: new Date(allocation.start_date!),
+        endDate: new Date(allocation.end_date!),
+        allocatedPerson: {
+          id: allocation.person_id!,
+          name: allocation.person_name!,
+          allocationPercentage: allocation.allocation_percentage || 0,
+          allocationId: allocation.id!,
+          allocationStartDate: new Date(allocation.start_date!),
+          allocationEndDate: new Date(allocation.end_date!)
+        },
+        requirement: {
+          id: 'orphaned',
+          role_type_name: allocation.role_type_name,
+          start_date: allocation.start_date,
+          end_date: allocation.end_date,
+          required_count: 1,
+          project_id: allocation.project_id,
+          role_type_id: allocation.role_type_id,
+          auto_generated_type: null,
+          parent_requirement_id: null,
+          source_allocation_id: null,
+          created_at: null,
+          updated_at: null,
+          project_name: null
+        }
+      }));
+
+      requirementsWithAllocations.push({
+        id: 'orphaned',
+        requirement: {
+          id: 'orphaned',
+          role_type_name: 'Orphaned Allocations',
+          start_date: orphanedAllocations[0]?.start_date || '',
+          end_date: orphanedAllocations[0]?.end_date || '',
+          required_count: orphanedAllocations.length,
+          project_id: orphanedAllocations[0]?.project_id || '',
+          role_type_id: orphanedAllocations[0]?.role_type_id || '',
+          auto_generated_type: null,
+          parent_requirement_id: null,
+          source_allocation_id: null,
+          created_at: null,
+          updated_at: null,
+          project_name: null
+        },
+        allocations: orphanedAllocations,
+        positions: orphanedPositions
+      });
+    }
+    
     return requirementsWithAllocations;
   };
 
@@ -156,6 +217,7 @@ export function ProjectTimeline({
   const renderRequirementBlock = (reqWithAllocs: RequirementWithAllocations, blockIndex: number) => {
     const req = reqWithAllocs.requirement;
     const positions = reqWithAllocs.positions;
+    const isOrphaned = req.id === 'orphaned';
     
     const requirementPosition = calculateItemPosition(
       { 
@@ -182,7 +244,11 @@ export function ProjectTimeline({
       >
         {/* Requirement Background */}
         <div
-          className="absolute bg-gray-100 border-2 border-gray-300 rounded-lg"
+          className={`absolute border-2 rounded-lg ${
+            isOrphaned 
+              ? 'bg-red-50 border-red-300' 
+              : 'bg-gray-100 border-gray-300'
+          }`}
           style={{
             left: `${requirementPosition.left}px`,
             width: `${Math.max(requirementPosition.width, 150)}px`,
@@ -190,14 +256,27 @@ export function ProjectTimeline({
           }}
         >
           {/* Requirement Header */}
-          <div className="p-2 border-b border-gray-300 bg-gray-200 rounded-t-lg">
+          <div className={`p-2 border-b rounded-t-lg ${
+            isOrphaned 
+              ? 'border-red-300 bg-red-100' 
+              : 'border-gray-300 bg-gray-200'
+          }`}>
             <div className="flex flex-col space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-gray-700">
-                  {req.role_type_name} ({req.required_count} needed)
+                <span className={`text-xs font-medium ${
+                  isOrphaned ? 'text-red-700' : 'text-gray-700'
+                }`}>
+                  {req.role_type_name} {isOrphaned ? '(No Requirement)' : `(${req.required_count} needed)`}
                 </span>
+                {isOrphaned && (
+                  <Badge variant="destructive" className="text-xs">
+                    Orphaned
+                  </Badge>
+                )}
               </div>
-              <span className="text-xs text-gray-500">
+              <span className={`text-xs ${
+                isOrphaned ? 'text-red-500' : 'text-gray-500'
+              }`}>
                 {new Date(req.start_date!).toLocaleDateString()} - {new Date(req.end_date!).toLocaleDateString()}
               </span>
             </div>
@@ -205,14 +284,14 @@ export function ProjectTimeline({
 
           {/* Individual Positions */}
           <div className="p-2 space-y-1">
-            {positions.map((position, posIndex) => renderPosition(position, posIndex, requirementPosition))}
+            {positions.map((position, posIndex) => renderPosition(position, posIndex, requirementPosition, isOrphaned))}
           </div>
         </div>
       </div>
     );
   };
 
-  const renderPosition = (position: RequirementPosition, posIndex: number, requirementPosition: { left: number; width: number }) => {
+  const renderPosition = (position: RequirementPosition, posIndex: number, requirementPosition: { left: number; width: number }, isOrphaned: boolean = false) => {
     const isHovered = hoveredPosition === position.id;
     const isAllocated = !!position.allocatedPerson;
     
@@ -292,31 +371,47 @@ export function ProjectTimeline({
               }
             </div>
             <div className="flex items-center space-x-2 pt-1 border-t border-gray-600">
-              {onAllocatePosition && (
+              {isOrphaned && position.allocatedPerson && onDeleteOrphanedAllocation ? (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0 hover:bg-gray-700 text-white hover:text-white"
+                  className="h-6 w-6 p-0 hover:bg-red-700 text-white hover:text-white"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onAllocatePosition(position);
+                    onDeleteOrphanedAllocation(position.allocatedPerson!.allocationId);
                   }}
                 >
-                  <Plus className="h-3 w-3" />
+                  <Trash2 className="h-3 w-3" />
                 </Button>
-              )}
-              {onEditPosition && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 hover:bg-gray-700 text-white hover:text-white"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditPosition(position);
-                  }}
-                >
-                  <Edit className="h-3 w-3" />
-                </Button>
+              ) : (
+                <>
+                  {onAllocatePosition && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 hover:bg-gray-700 text-white hover:text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAllocatePosition(position);
+                      }}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  )}
+                  {onEditPosition && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 hover:bg-gray-700 text-white hover:text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditPosition(position);
+                      }}
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>

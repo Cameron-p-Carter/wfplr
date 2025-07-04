@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -451,9 +451,9 @@ export default function ProjectDetailPage() {
                         </TableRow>
                       ) : (
                         groupedRequirements.map((requirement) => (
-                          <>
+                          <React.Fragment key={requirement.id}>
                             {/* Parent Requirement */}
-                            <TableRow key={requirement.id} className="border-b">
+                            <TableRow className="border-b">
                               <TableCell className="font-medium">
                                 <div className="flex items-center space-x-2">
                                   <span>{requirement.role_type_name}</span>
@@ -523,7 +523,7 @@ export default function ProjectDetailPage() {
                                 </TableCell>
                               </TableRow>
                             ))}
-                          </>
+                          </React.Fragment>
                         ))
                       )}
                     </TableBody>
@@ -705,6 +705,7 @@ export default function ProjectDetailPage() {
               onConfigChange={setTimelineConfig}
               onAllocatePosition={handleAllocatePosition}
               onEditPosition={handleEditPosition}
+              onDeleteOrphanedAllocation={removeAllocation}
               projectStartDate={project ? new Date(project.start_date) : undefined}
               projectEndDate={project ? new Date(project.end_date) : undefined}
             />

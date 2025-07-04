@@ -370,6 +370,31 @@ export async function updateProjectRequirement(id: string, requirement: TablesUp
 }
 
 export async function deleteProjectRequirement(id: string) {
+  // First, delete all auto-generated child requirements that have this requirement as their parent
+  const { error: childDeleteError } = await supabase
+    .from("project_resource_requirements")
+    .delete()
+    .eq("parent_requirement_id", id)
+    .not("auto_generated_type", "is", null);
+
+  if (childDeleteError) {
+    console.error("Error deleting child requirements:", childDeleteError);
+    throw childDeleteError;
+  }
+
+  // Set requirement_id to null for any allocations linked to this requirement
+  // This makes them "orphaned" allocations that can be cleaned up later
+  const { error: orphanError } = await supabase
+    .from("project_allocations")
+    .update({ requirement_id: null })
+    .eq("requirement_id", id);
+
+  if (orphanError) {
+    console.error("Error orphaning allocations:", orphanError);
+    throw orphanError;
+  }
+
+  // Then delete the parent requirement itself
   const { error } = await supabase
     .from("project_resource_requirements")
     .delete()
