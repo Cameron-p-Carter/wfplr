@@ -4,14 +4,20 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { 
   getProjectRequirements, 
+  getGroupedProjectRequirements,
   createProjectRequirement, 
   updateProjectRequirement, 
   deleteProjectRequirement 
 } from "@/lib/supabase/queries";
 import type { Tables, TablesInsert, TablesUpdate } from "@/types/supabase";
 
+interface GroupedRequirement extends Tables<"project_requirements_detailed"> {
+  children: Tables<"project_requirements_detailed">[];
+}
+
 export function useProjectRequirements(projectId: string) {
   const [requirements, setRequirements] = useState<Tables<"project_requirements_detailed">[]>([]);
+  const [groupedRequirements, setGroupedRequirements] = useState<GroupedRequirement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,8 +27,12 @@ export function useProjectRequirements(projectId: string) {
     try {
       setLoading(true);
       setError(null);
-      const data = await getProjectRequirements(projectId);
+      const [data, groupedData] = await Promise.all([
+        getProjectRequirements(projectId),
+        getGroupedProjectRequirements(projectId)
+      ]);
       setRequirements(data);
+      setGroupedRequirements(groupedData);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch project requirements";
       setError(message);
@@ -74,6 +84,7 @@ export function useProjectRequirements(projectId: string) {
 
   return {
     requirements,
+    groupedRequirements,
     loading,
     error,
     create,

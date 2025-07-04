@@ -31,7 +31,7 @@ export default function ProjectDetailPage() {
   
   const [project, setProject] = useState<Tables<"projects"> | null>(null);
   const [projectLoading, setProjectLoading] = useState(true);
-  const { requirements, loading: requirementsLoading, create, update, remove } = useProjectRequirements(projectId);
+  const { requirements, groupedRequirements, loading: requirementsLoading, create, update, remove } = useProjectRequirements(projectId);
   const { allocations, gaps, loading: allocationsLoading, create: createAllocation, update: updateAllocation, remove: removeAllocation } = useProjectAllocations(projectId);
   
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -443,44 +443,87 @@ export default function ProjectDetailPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {requirements.length === 0 ? (
+                      {groupedRequirements.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                             No resource requirements defined. Add the first requirement to get started.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        requirements.map((requirement) => (
-                          <TableRow key={requirement.id}>
-                            <TableCell className="font-medium">
-                              {requirement.role_type_name}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {requirement.required_count} {requirement.required_count === 1 ? 'person' : 'people'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{formatDate(requirement.start_date!)}</TableCell>
-                            <TableCell>{formatDate(requirement.end_date!)}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setEditingRequirement(requirement)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setDeletingRequirement(requirement)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
+                        groupedRequirements.map((requirement) => (
+                          <>
+                            {/* Parent Requirement */}
+                            <TableRow key={requirement.id} className="border-b">
+                              <TableCell className="font-medium">
+                                <div className="flex items-center space-x-2">
+                                  <span>{requirement.role_type_name}</span>
+                                  {requirement.auto_generated_type && (
+                                    <Badge 
+                                      variant={requirement.auto_generated_type === 'leave_coverage' ? 'destructive' : 'secondary'}
+                                      className="text-xs"
+                                    >
+                                      {requirement.auto_generated_type === 'leave_coverage' ? 'Leave Coverage' : 'Partial Gap'}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {requirement.required_count} {requirement.required_count === 1 ? 'person' : 'people'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{formatDate(requirement.start_date!)}</TableCell>
+                              <TableCell>{formatDate(requirement.end_date!)}</TableCell>
+                              <TableCell>
+                                {!requirement.auto_generated_type && (
+                                  <div className="flex items-center space-x-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setEditingRequirement(requirement)}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setDeletingRequirement(requirement)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                            
+                            {/* Child Requirements (Auto-Generated) */}
+                            {requirement.children && requirement.children.map((child) => (
+                              <TableRow key={child.id} className="bg-gray-50 border-l-4 border-l-blue-200">
+                                <TableCell className="font-medium pl-8">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm text-muted-foreground">↳</span>
+                                    <span>{child.role_type_name}</span>
+                                    <Badge 
+                                      variant={child.auto_generated_type === 'leave_coverage' ? 'destructive' : 'secondary'}
+                                      className="text-xs"
+                                    >
+                                      {child.auto_generated_type === 'leave_coverage' ? 'Leave Coverage' : 'Partial Gap'}
+                                    </Badge>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="text-xs">
+                                    {child.required_count} {child.required_count === 1 ? 'person' : 'people'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-sm">{formatDate(child.start_date!)}</TableCell>
+                                <TableCell className="text-sm">{formatDate(child.end_date!)}</TableCell>
+                                <TableCell>
+                                  <span className="text-xs text-muted-foreground">Auto-generated</span>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </>
                         ))
                       )}
                     </TableBody>
