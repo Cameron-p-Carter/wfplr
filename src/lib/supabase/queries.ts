@@ -122,13 +122,23 @@ export async function getProjectGaps(projectId: string) {
   for (const requirement of requirements) {
     if (!requirement.start_date || !requirement.end_date || !requirement.role_type_id) continue;
     
-    // Find allocations that match this requirement
-    const matchingAllocations = allocations.filter(allocation => 
+    // Find allocations that are directly linked to this requirement
+    const directAllocations = allocations.filter(allocation => 
+      allocation.requirement_id === requirement.id
+    );
+    
+    // Also find legacy allocations (without requirement_id) that overlap with this requirement
+    // This ensures backward compatibility with existing data
+    const legacyAllocations = allocations.filter(allocation => 
+      !allocation.requirement_id && // No requirement_id set (legacy allocation)
       allocation.role_type_id === requirement.role_type_id &&
       allocation.start_date && allocation.end_date &&
       new Date(allocation.start_date) <= new Date(requirement.end_date) &&
       new Date(allocation.end_date) >= new Date(requirement.start_date)
     );
+    
+    // Combine direct and legacy allocations
+    const matchingAllocations = [...directAllocations, ...legacyAllocations];
     
     // Calculate allocated count (sum of allocation percentages / 100)
     const allocatedCount = matchingAllocations.reduce((sum, allocation) => 
